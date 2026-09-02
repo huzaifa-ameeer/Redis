@@ -17,7 +17,7 @@ const port = process.env.PORT || 3000;
 
 app.post("/create", async (req, res) => {
   const { name, email, password } = req.body;
-  await redis.del("users:all")
+  await redis.del("users:all");
   const user = await userModel.create({
     name,
     email,
@@ -41,6 +41,36 @@ app.get("/get", async (req, res) => {
   res.json({
     message: "All users fetched",
     user,
+  });
+});
+
+//send otp
+
+app.post("/send-otp", async (req, res) => {
+  const { email } = req.body;
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  await redis.set(`otp:${email}`, otp, "EX", 30);
+  res.json(otp);
+});
+
+//verify otp
+
+app.post("/verify-otp", async (req, res) => {
+  const { otp, email } = req.body;
+  const cachedOtp = await redis.get(`otp:${email}`);
+  if (!cachedOtp) {
+    return res.json({
+      message: "Otp not found or is expired",
+    });
+  }
+  if (cachedOtp != otp) {
+    return res.json({
+      message: "Invalid otp",
+    });
+  }
+
+  res.json({
+    message: "Otp verified",
   });
 });
 
